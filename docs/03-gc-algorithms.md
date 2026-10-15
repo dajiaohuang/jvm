@@ -49,7 +49,9 @@ GC Roots 并不包括堆中对象所引用的对象，这样就不会有循环�
 
 ### 虚引用（Phantom Reference）
 
-虚引用也称幽灵引用或者幻影引用。它不会让程序通过 `get()` 取得 referent；当垃圾收集器判定 referent 已达到虚可达状态时，注册到 `ReferenceQueue` 的虚引用会被清除并入队，程序可据此安排对象的事后清理。`Cleaner` 使用虚引用和引用队列实现清理动作；这不是要求应用类重写 `finalize()` 的机制。Java finalization 已弃用并计划移除，资源应优先显式关闭或使用 `Cleaner` 等替代方案。
+虚引用也称幽灵引用或者幻影引用，`get()` 始终返回 `null`。[Java SE 9 的 `PhantomReference` API](https://docs.oracle.com/javase/9/docs/api/java/lang/ref/PhantomReference.html) 规定：GC 判定对象虚可达时，原子地清除相应虚引用；注册到引用队列的虚引用会同时或稍后入队。这不能无条件套用于所有 JDK 8：例如 [OpenJDK 8 GA](https://github.com/openjdk/jdk8u/blob/jdk8-b132/jdk/src/share/classes/java/lang/ref/PhantomReference.java) 不在入队时自动清除虚引用，而 [8u382](https://github.com/openjdk/jdk8u/blob/jdk8u382-b05/jdk/src/share/classes/java/lang/ref/PhantomReference.java) 已采用自动清除语义，应核对具体更新版本。
+
+[`java.lang.ref.Cleaner`](https://docs.oracle.com/javase/9/docs/api/java/lang/ref/Cleaner.html) 自 JDK 9 提供，使用虚引用和引用队列实现清理动作，不要求应用类重写 `finalize()`。[JEP 421](https://openjdk.org/jeps/421) 在 JDK 18 将 finalization 标记为待移除；资源应优先显式关闭，不能依赖 GC 及时执行清理。
 
 ## 回收堆中无效对象
 

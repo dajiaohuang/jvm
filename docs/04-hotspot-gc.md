@@ -80,9 +80,12 @@ G1 面向服务端应用，并将堆划分为独立的 Region。它仍然是分�
 
 并不！每个 Region 都有一个 Remembered Set，用于记录本区域中所有对象引用的对象所在的区域，进行可达性分析时，只要在 GC Roots 中再加上 Remembered Set 即可防止对整个堆内存进行遍历。
 
-如果不计算维护 Remembered Set 的操作，G1 收集器的工作过程分为以下几个步骤：
+以 [JDK 8 HotSpot G1 调优指南](https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/g1_gc_tuning.html) 为例，标记周期包括以下阶段；这里的“并发”指与应用线程同时工作，“并行”指多个 GC 线程协作：
 
-- 初始标记：Stop The World，仅使用一条初始标记线程对所有与 GC Roots 直接关联的对象进行标记。
-- 并发标记：收集器使用并发标记线程与应用线程同时工作。并发标记线程数由 HotSpot 的 `-XX:ConcGCThreads` 等人体工学设置控制，不固定为一条。
-- 最终标记：Stop The World，使用多条标记线程并发执行。
-- 筛选回收：回收废弃对象，此时也要 Stop The World，并使用多条筛选回收线程并发执行。
+- 初始标记：Stop The World，随一次年轻代回收进行，不应概括为固定单线程。
+- 根区域扫描：与应用线程并发，扫描 Survivor 区域到老年代的引用。
+- 并发标记：与应用线程同时工作；标记线程数受 `-XX:ConcGCThreads` 等设置影响，不固定为一条。
+- 最终标记（Remark）：Stop The World，完成剩余标记及引用处理，不与应用线程并发。
+- 清理（Cleanup）：统计和 Remembered Set 清理包含 Stop The World 操作，空区域复位和归还空闲列表的部分工作可并发进行。
+
+后续混合回收中的对象撤离在 Stop The World 暂停期间进行，可由多个 GC 线程并行执行；不能把它与并发标记混为同一阶段。
